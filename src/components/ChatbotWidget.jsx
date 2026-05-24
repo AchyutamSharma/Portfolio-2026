@@ -49,14 +49,14 @@ const ChatbotWidget = () => {
         reply = "Hello! Welcome to Achyutam's portfolio.";
       } else if (userText.includes("skills")) {
         reply =
-          "Achyutam works with React, Python, Node.js, Flask, TensorFlow, and Data Analytics tools.";
+          "Achyutam works with React, Python, Node.js, JavaScript, REST APIs, and Data Analytics tools.";
       } else if (userText.includes("projects")) {
         reply =
-          "You can explore projects like Plant Disease Detection, Sales Dashboard, and AI Productivity Assistant.";
+          "You can explore projects like Plant Disease Detection, Portfolio, and Diwali Sales Analysis — Exploratory Data Analysis.";
       } else if (userText.includes("contact")) {
         reply = "You can connect using the Contact section on this portfolio.";
       } else if (userText.includes("education")) {
-        reply = "Achyutam is currently pursuing studies in Computer Science.";
+        reply = "Achyutam is currently Complete studies in Masters in Computer Application.";
       } else if (userText.includes("github")) {
         reply =
           "GitHub project links are available inside the Projects section.";
