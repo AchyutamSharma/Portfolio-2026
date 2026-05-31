@@ -1,42 +1,57 @@
-import React, { useEffect, useState } from 'react';
-import { portfolioData } from '../data';
+import React, { useEffect, useState } from "react";
+import { portfolioData } from "../data";
+
 
 const Projects = () => {
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState("all");
   const [savedData, setSavedData] = useState(portfolioData);
 
   useEffect(() => {
     const loadSavedData = () => {
       try {
-        const stored = localStorage.getItem('portfolioAdminData');
+        const stored = localStorage.getItem("portfolioAdminData");
         if (stored) {
           setSavedData(JSON.parse(stored));
         }
       } catch (error) {
-        console.error('Unable to load saved portfolio data:', error);
+        console.error("Unable to load saved portfolio data:", error);
       }
     };
 
     loadSavedData();
-    window.addEventListener('portfolioDataChanged', loadSavedData);
-    return () => window.removeEventListener('portfolioDataChanged', loadSavedData);
+    window.addEventListener("portfolioDataChanged", loadSavedData);
+    return () =>
+      window.removeEventListener("portfolioDataChanged", loadSavedData);
   }, []);
 
   const projects = savedData.projects || portfolioData.projects;
   const categories = [
-    { id: 'all', name: 'All Work' },
-    ...Array.from(new Set(projects.map((project) => (project.category || '').toLowerCase()).filter(Boolean))).map((category) => ({
+    { id: "all", name: "All Work" },
+    ...Array.from(
+      new Set(
+        projects
+          .map((project) => (project.category || "").toLowerCase())
+          .filter(Boolean),
+      ),
+    ).map((category) => ({
       id: category,
-      name: category.split(/[-\s]/).map((word) => word.charAt(0).toUpperCase() + word.slice(1)).join(' '),
+      name: category
+        .split(/[-\s]/)
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" "),
     })),
   ];
 
-  const filteredProjects = filter === 'all'
-    ? projects
-    : projects.filter((p) => (p.category || '').toLowerCase() === filter);
+  const filteredProjects =
+    filter === "all"
+      ? projects
+      : projects.filter((p) => (p.category || "").toLowerCase() === filter);
 
   return (
-    <section id="projects" className="py-24 relative overflow-hidden bg-gray-950/40 reveal">
+    <section
+      id="projects"
+      className="py-24 relative overflow-hidden bg-gray-950/40 reveal"
+    >
       <div className="absolute inset-0 bg-radial-cyan opacity-5 z-0 pointer-events-none"></div>
 
       <div className="max-w-5xl mx-auto px-6 relative z-10">
@@ -54,10 +69,11 @@ const Projects = () => {
             <button
               key={cat.id}
               onClick={() => setFilter(cat.id)}
-              className={`px-5 py-2 font-mono text-xs tracking-widest uppercase transition-all duration-300 rounded-none ${filter === cat.id
-                  ? 'border border-cyan-500 bg-cyan-500 text-gray-950 font-bold'
-                  : 'border border-gray-700 text-gray-400 hover:border-cyan-500/50 hover:text-cyan-400 bg-gray-900/10'
-                }`}
+              className={`px-5 py-2 font-mono text-xs tracking-widest uppercase transition-all duration-300 rounded-none ${
+                filter === cat.id
+                  ? "border border-cyan-500 bg-cyan-500 text-gray-950 font-bold"
+                  : "border border-gray-700 text-gray-400 hover:border-cyan-500/50 hover:text-cyan-400 bg-gray-900/10"
+              }`}
             >
               {cat.name}
             </button>
@@ -69,7 +85,7 @@ const Projects = () => {
           {filteredProjects.map((project) => (
             <div
               key={project.id}
-              className="glow-card reveal flex flex-col h-full border border-gray-900 bg-gray-950/40 hover:border-cyan-500/30 transition-all duration-300 relative group overflow-hidden"
+              className="glow-card  reveal flex flex-col h-full border border-gray-900 bg-gray-950/40 hover:border-cyan-500/30 transition-all duration-300 relative group overflow-hidden"
             >
               {/* Card Banner */}
               <div className="relative h-44 border-b border-gray-900 overflow-hidden bg-gray-900">
@@ -84,7 +100,11 @@ const Projects = () => {
                 ) : (
                   <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-gray-900 to-gray-950">
                     <span className="text-4xl filter grayscale group-hover:grayscale-0 transition-all duration-500">
-                      {project.category === 'data' ? '📊' : project.category === 'ml' ? '🧠' : '💻'}
+                      {project.category === "data"
+                        ? "📊"
+                        : project.category === "ml"
+                          ? "🧠"
+                          : "💻"}
                     </span>
                   </div>
                 )}
@@ -97,23 +117,26 @@ const Projects = () => {
               </div>
 
               {/* Card Content */}
-              <div className="flex-1 p-6 flex flex-col justify-between">
+              <div className="flex-1 p-4 flex flex-col justify-between">
                 <div>
                   <h4 className="text-lg font-bold font-mono tracking-wide text-white mb-2 group-hover:text-cyan-400 transition-colors duration-300 text-glow">
                     {project.title}
                   </h4>
                   <p className="text-xs font-mono text-gray-500 mb-4">
-                    // {(project.category || 'general').toUpperCase()}
+                    // {(project.category || "general").toUpperCase()}
                   </p>
-                  <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+                  <p className="text-sm text-gray-400 mb-1 leading-relaxed  line-clamp-4">
                     {project.longDescription || project.description}
                   </p>
                 </div>
 
+
+
+
                 <div>
                   {/* Tags */}
                   <div className="flex flex-wrap gap-1.5 mb-6">
-                    {project.tags?.map((tag) => (
+                    {project.tags?.slice(0, 4).map((tag) => (
                       <span
                         key={tag}
                         className="text-[10px] font-mono border border-gray-800 bg-gray-900/30 px-2 py-0.5 text-gray-400"
@@ -121,6 +144,11 @@ const Projects = () => {
                         {tag}
                       </span>
                     ))}
+                    {project.tags?.length > 4 && (
+                      <span className="text-[10px] font-mono border border-gray-800 bg-gray-900/30 px-2 py-0.5 text-cyan-400">
+                        +{project.tags.length - 4} More
+                      </span>
+                    )}
                   </div>
 
                   {/* Actions */}

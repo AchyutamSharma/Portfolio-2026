@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
+import { portfolioData } from "../data";
 
 const ChatbotWidget = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [pData, setPData] = useState(portfolioData);
   const [messages, setMessages] = useState([
     {
       role: "assistant",
@@ -10,7 +12,32 @@ const ChatbotWidget = () => {
   ]);
   const [input, setInput] = useState("");
   const [limit, setLimit] = useState(0);
+  const [isTyping, setIsTyping] = useState(false);
+  const [topicHits, setTopicHits] = useState({
+    projects: 0,
+    skills: 0,
+    contact: 0,
+  });
   const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    const loadData = () => {
+      try {
+        const stored = localStorage.getItem("portfolioAdminData");
+        if (stored) {
+          setPData(JSON.parse(stored));
+        } else {
+          setPData(portfolioData);
+        }
+      } catch (error) {
+        console.error("Failed to load portfolio data inside chatbot", error);
+      }
+    };
+
+    loadData();
+    window.addEventListener("portfolioDataChanged", loadData);
+    return () => window.removeEventListener("portfolioDataChanged", loadData);
+  }, []);
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
@@ -23,66 +50,112 @@ const ChatbotWidget = () => {
 
   useEffect(() => {
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      messagesEndRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+      });
     }
-  }, [messages]);
+  }, [messages, isTyping]);
 
-  const handleSend = (e) => {
-    e.preventDefault();
-    if (!input.trim() || limit >= 10) return;
+  const handleSend = async (e, textOverride = "") => {
+    if (e) e.preventDefault();
+    const queryText = (textOverride || input).trim();
+    if (!queryText) return;
 
-    const userMessage = { role: "user", content: input };
+    if (limit >= 10) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: queryText },
+        {
+          role: "assistant",
+          content: `You have reached the session AI query limit! Let's connect directly instead. You can email me at ${pData.profile?.email || "akshubusiness187@gmail.com"} or find me on LinkedIn.`,
+          isRateLimitCard: true,
+        },
+      ]);
+      setInput("");
+      return;
+    }
+
+    const userMessage = { role: "user", content: queryText };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLimit((prev) => prev + 1);
+    setIsTyping(true);
 
-    setTimeout(() => {
-      const userText = userMessage.content.toLowerCase();
+    const lowerQuery = queryText.toLowerCase();
+    let updatedHits = { ...topicHits };
+    if (lowerQuery.includes("project")) updatedHits.projects += 1;
+    if (lowerQuery.includes("skill") || lowerQuery.includes("tech"))
+      updatedHits.skills += 1;
+    if (
+      lowerQuery.includes("contact") ||
+      lowerQuery.includes("email") ||
+      lowerQuery.includes("reach")
+    )
+      updatedHits.contact += 1;
+    setTopicHits(updatedHits);
 
-      let reply = "";
-
-      if (
-        userText.includes("hello") ||
-        userText.includes("hi") ||
-        userText.includes("hey")
-      ) {
-        reply = "Hello! Welcome to Achyutam's portfolio.";
-      } else if (userText.includes("skills")) {
-        reply =
-          "Achyutam works with React, Python, Node.js, JavaScript, REST APIs, and Data Analytics tools.";
-      } else if (userText.includes("projects")) {
-        reply =
-          "You can explore projects like Plant Disease Detection, Portfolio, and Diwali Sales Analysis — Exploratory Data Analysis.";
-      } else if (userText.includes("contact")) {
-        reply = "You can connect using the Contact section on this portfolio.";
-      } else if (userText.includes("education")) {
-        reply = "Achyutam is currently Complete studies in Masters in Computer Application.";
-      } else if (userText.includes("github")) {
-        reply =
-          "GitHub project links are available inside the Projects section.";
-      } else if (userText.includes("experience")) {
-        reply =
-          "Achyutam has experience in Full Stack Development and AI projects.";
-      } else if (userText.includes("resume")) {
-        reply = "You can download the resume from the Hero section.";
-      } else if (userText.includes("location")) {
-        reply = "Achyutam is based in India.";
-      } else {
-        reply = "Sorry, I only support basic portfolio questions right now.";
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          message: queryText,
+        }),
+      });
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Server Error:", errorText);
+        throw new Error(errorText);
       }
+      const data = await response.json();
+      if (response.ok && data.success) {
+        let reply = data.reply;
 
+        if (lowerQuery.includes("project") && updatedHits.projects > 1) {
+          reply += `\n\n💡 Shortcut: You can browse all my repositories on GitHub: ${pData.profile?.github || "https://github.com/AchyutamSharma"}`;
+        } else if (
+          (lowerQuery.includes("skill") || lowerQuery.includes("tech")) &&
+          updatedHits.skills > 1
+        ) {
+          reply += `\n\n💡 Tip: Scroll down to the Skills section on this page to see interactive level charts!`;
+        } else if (
+          (lowerQuery.includes("contact") || lowerQuery.includes("email")) &&
+          updatedHits.contact > 1
+        ) {
+          reply += `\n\n💡 Connect Directly: Email me at ${pData.profile?.email || "akshubusiness187@gmail.com"} or message me on LinkedIn.`;
+        }
+
+        setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+      } else {
+        throw new Error(data.message || "Failed to fetch response");
+      }
+    } catch (error) {
+      console.error("Chat request failed:", error);
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
-          content: reply,
+          content:
+            "Sorry, I ran into an issue connecting to the chat helper. Feel free to connect via the contact form above!",
         },
       ]);
-    }, 1000);
+    } finally {
+      setIsTyping(false);
+    }
+  };
+
+  const triggerSuggestion = (text) => {
+    handleSend(null, text);
   };
 
   return (
-    <div className="fixed bottom-6 right-6 md:right-8 z-50 font-mono">
+    <div
+      className="fixed bottom-6 right-6 md:right-8 z-[9999] font-mono animate-page-fade"
+      style={{ zIndex: 9999 }}
+    >
       {/* Floating Trigger button */}
       {!isOpen && (
         <button
@@ -96,19 +169,24 @@ const ChatbotWidget = () => {
       {/* Floating Chat Panel */}
       {isOpen && (
         <div
-          className="relative animate-chat-scale border border-cyan-500/20 bg-[#050816]/95 backdrop-blur-xl rounded-2xl flex flex-col shadow-[0_40px_80px_-24px_rgba(8,145,178,0.7)] overflow-hidden"
+          className="relative animate-chat-scale border border-cyan-500/20 rounded-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
           style={{
+            backgroundColor: "#05060f",
+            boxShadow: "0 25px 50px -12px rgba(8, 145, 178, 0.6)",
             width: "min(24rem, calc(100vw - 2rem))",
             maxWidth: "30rem",
             height: "60vh",
             maxHeight: "600px",
-            minHeight: "420px",
+            minHeight: "450px",
+            zIndex: 10000,
           }}
         >
           {/* Header */}
           <div className="p-5 border-b border-gray-900 flex justify-between items-center bg-gradient-to-r from-cyan-500/10 via-transparent to-purple-500/10 backdrop-blur-sm">
             <div className="flex items-center gap-3">
-              <span className="inline-flex h-3.5 w-3.5 rounded-full bg-cyan-400 animate-pulse"></span>
+              <span
+                className={`inline-flex h-3.5 w-3.5 rounded-full bg-cyan-400 ${isTyping ? "animate-ping" : "animate-pulse"}`}
+              ></span>
               <span className="text-sm font-bold text-white uppercase tracking-wider">
                 AI Assistant
               </span>
@@ -120,7 +198,7 @@ const ChatbotWidget = () => {
             </div>
             <button
               onClick={() => setIsOpen(false)}
-              className=" text-white text-2xl font-bold hover:text-cyan-400 transition-colors z-50"
+              className="text-white text-2xl font-bold hover:text-cyan-400 transition-colors z-50 px-2"
             >
               ✕
             </button>
@@ -136,24 +214,96 @@ const ChatbotWidget = () => {
             {messages.map((m, idx) => (
               <div
                 key={idx}
-                className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+                className={`flex flex-col ${m.role === "user" ? "items-end" : "items-start"}`}
               >
                 <div
-                  className={`max-w-[78%] p-4 text-sm leading-relaxed rounded-xl ${
+                  className={`max-w-[85%] p-4 text-sm leading-relaxed rounded-xl whitespace-pre-wrap ${
                     m.role === "user"
                       ? "bg-cyan-500 text-gray-950 font-semibold shadow-lg shadow-cyan-500/10"
-                      : "border border-gray-800 bg-gray-900/70 text-gray-300"
+                      : m.isRateLimitCard
+                        ? "border border-cyan-500/30 bg-cyan-500/10 text-cyan-200 font-semibold"
+                        : "border border-gray-800 bg-gray-900/70 text-gray-300"
                   }`}
                 >
                   {m.content}
+
+                  {m.isRateLimitCard && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <a
+                        href={`mailto:${pData.profile?.email || "akshubusiness187@gmail.com"}`}
+                        className="px-3 py-1.5 text-xs bg-cyan-500 hover:bg-cyan-400 text-gray-950 font-bold transition-all duration-200"
+                      >
+                        Email Me
+                      </a>
+                      {pData.profile?.linkedin && (
+                        <a
+                          href={pData.profile.linkedin}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3 py-1.5 text-xs border border-cyan-500/30 hover:border-cyan-400 bg-cyan-500/5 hover:bg-cyan-500/10 text-cyan-300 transition-all duration-200"
+                        >
+                          LinkedIn
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
+
+            {/* Bouncing Typing Dots */}
+            {isTyping && (
+              <div className="flex justify-start">
+                <div className="border border-gray-800 bg-gray-900/70 text-gray-400 px-4 py-3.5 rounded-xl flex items-center gap-2">
+                  <span className="text-xs">AI is thinking</span>
+                  <span className="flex gap-1">
+                    <span
+                      className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce"
+                      style={{ animationDelay: "0ms" }}
+                    ></span>
+                    <span
+                      className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce"
+                      style={{ animationDelay: "150ms" }}
+                    ></span>
+                    <span
+                      className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-bounce"
+                      style={{ animationDelay: "300ms" }}
+                    ></span>
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Suggestion Chips */}
+            {messages.length === 1 && !isTyping && (
+              <div className="flex flex-wrap gap-2 pt-2">
+                {[
+                  { label: "🔍 Skills", text: "What are your core skills?" },
+                  { label: "💼 Projects", text: "Tell me about your projects" },
+                  {
+                    label: "🎓 Education",
+                    text: "What studies have you completed?",
+                  },
+                  { label: "✉️ Contact Info", text: "How can I contact you?" },
+                ].map((chip, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => triggerSuggestion(chip.text)}
+                    className="px-3 py-1.5 text-xs border border-cyan-500/30 hover:border-cyan-400 bg-cyan-500/5 hover:bg-cyan-500/10 text-cyan-300 rounded-full transition-all duration-200"
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
+
           {/* Form input */}
           <form
-            onSubmit={handleSend}
+            onSubmit={(e) => handleSend(e)}
             className="p-4 border-t border-gray-900 bg-gray-900/30 flex gap-3"
           >
             <input
@@ -161,13 +311,15 @@ const ChatbotWidget = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               disabled={limit >= 10}
-              placeholder={limit >= 10 ? "Limit reached" : "Type query..."}
+              placeholder={
+                limit >= 10 ? "Query limit reached" : "Type query..."
+              }
               className="flex-1 bg-black/40 border border-cyan-500/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-cyan-400"
             />
             <button
               type="submit"
               disabled={limit >= 10}
-              className="glow-button px-5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm transition-all duration-300"
+              className="glow-button px-5 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-sm transition-all duration-300 disabled:opacity-50"
             >
               SEND
             </button>

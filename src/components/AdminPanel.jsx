@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { portfolioData } from '../data';
 
 const getEmptyProject = () => ({
@@ -85,6 +85,8 @@ const AdminPanel = ({ isOpen, onClose }) => {
   const [skillDraft, setSkillDraft] = useState(getEmptySkill());
   const [editingSkillName, setEditingSkillName] = useState('');
   const [educationDraft, setEducationDraft] = useState(getEmptyEducation());
+  const [faqDraft, setFaqDraft] = useState({ id: '', question: '', answer: '' });
+  const [editingFaqId, setEditingFaqId] = useState('');
 
   useEffect(() => {
     if (!isOpen) return;
@@ -383,6 +385,54 @@ const AdminPanel = ({ isOpen, onClose }) => {
     setStatus('Education entry deleted.');
   };
 
+  const handleFaqAdd = () => {
+    if (!faqDraft.question.trim() || !faqDraft.answer.trim()) {
+      setStatus('Both Question and Answer are required.');
+      return;
+    }
+    const newFaq = {
+      id: Date.now().toString(),
+      question: faqDraft.question.trim(),
+      answer: faqDraft.answer.trim()
+    };
+    saveAdminData({
+      ...adminData,
+      faqs: [...(adminData.faqs || []), newFaq]
+    });
+    setFaqDraft({ id: '', question: '', answer: '' });
+    setStatus('FAQ added successfully.');
+  };
+
+  const handleFaqEdit = (faq) => {
+    setFaqDraft({ ...faq });
+    setEditingFaqId(faq.id);
+    setStatus('Editing FAQ.');
+    setActiveTab('faq');
+  };
+
+  const handleFaqSave = () => {
+    if (!faqDraft.question.trim() || !faqDraft.answer.trim()) {
+      setStatus('Both Question and Answer are required.');
+      return;
+    }
+    const updatedFaqs = (adminData.faqs || []).map((f) => 
+      f.id === editingFaqId ? { ...f, question: faqDraft.question.trim(), answer: faqDraft.answer.trim() } : f
+    );
+    saveAdminData({ ...adminData, faqs: updatedFaqs });
+    setFaqDraft({ id: '', question: '', answer: '' });
+    setEditingFaqId('');
+    setStatus('FAQ saved successfully.');
+  };
+
+  const handleFaqDelete = (id) => {
+    if (!window.confirm('Delete this FAQ?')) return;
+    saveAdminData({
+      ...adminData,
+      faqs: (adminData.faqs || []).filter((faq) => faq.id !== id)
+    });
+    setStatus('FAQ removed.');
+  };
+
   const handleClose = () => {
     setIsAuthenticated(false);
     setPassword('');
@@ -396,6 +446,8 @@ const AdminPanel = ({ isOpen, onClose }) => {
     setProjectDraft(getEmptyProject());
     setSkillDraft(getEmptySkill());
     setEducationDraft(getEmptyEducation());
+    setFaqDraft({ id: '', question: '', answer: '' });
+    setEditingFaqId('');
     onClose();
   };
 
@@ -1086,6 +1138,102 @@ const AdminPanel = ({ isOpen, onClose }) => {
       );
     }
 
+    if (activeTab === 'faq') {
+      const faqsList = adminData.faqs || [];
+      return (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 gap-4 border border-gray-800 bg-gray-900/40 p-6 rounded-md">
+            <div className="space-y-2">
+              <label className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Question</label>
+              <input
+                type="text"
+                placeholder="How long have you been coding?"
+                value={faqDraft.question}
+                onChange={(e) => setFaqDraft((prev) => ({ ...prev, question: e.target.value }))}
+                className="w-full bg-gray-950 border border-gray-800 px-4 py-3 text-sm font-mono text-white focus:outline-none focus:border-cyan-500 transition-colors"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] font-mono text-gray-500 uppercase tracking-widest">Answer</label>
+              <textarea
+                rows={3}
+                placeholder="I started coding in 2020..."
+                value={faqDraft.answer}
+                onChange={(e) => setFaqDraft((prev) => ({ ...prev, answer: e.target.value }))}
+                className="w-full bg-gray-950 border border-gray-800 px-4 py-3 text-sm font-mono text-white focus:outline-none focus:border-cyan-500 transition-colors resize-none"
+              />
+            </div>
+
+            <div className="flex gap-3">
+              {editingFaqId ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleFaqSave}
+                    className="py-3 px-5 bg-cyan-500 text-gray-950 font-bold font-mono uppercase tracking-[0.2em] hover:bg-cyan-400 transition-all duration-300"
+                  >
+                    Save FAQ
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setFaqDraft({ id: '', question: '', answer: '' }); setEditingFaqId(''); setStatus(''); }}
+                    className="py-3 px-5 border border-gray-800 text-gray-400 font-mono uppercase tracking-[0.2em] hover:border-cyan-500 hover:text-cyan-400 transition-all duration-300"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleFaqAdd}
+                  className="py-3 px-5 bg-cyan-500 text-gray-950 font-bold font-mono uppercase tracking-[0.2em] hover:bg-cyan-400 transition-all duration-300"
+                >
+                  Add FAQ
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {faqsList.length === 0 ? (
+              <div className="p-4 text-xs text-gray-400 border border-dashed border-gray-700 rounded">No custom Q&A pairs added yet.</div>
+            ) : (
+              faqsList.map((faq) => (
+                <div key={faq.id} className="p-4 border border-gray-800 bg-gray-900/40 rounded-md">
+                  <div className="flex items-start justify-between gap-4 mb-3">
+                    <div className="space-y-1">
+                      <div className="text-xs font-mono uppercase tracking-widest text-cyan-300">Question</div>
+                      <div className="text-sm font-bold text-white">{faq.question}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleFaqEdit(faq)}
+                        className="text-cyan-400 text-xs font-mono hover:text-cyan-300"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleFaqDelete(faq.id)}
+                        className="text-red-400 text-xs font-mono hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="text-xs font-mono uppercase tracking-widest text-gray-500">Answer</div>
+                    <p className="text-sm text-gray-300">{faq.answer}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      );
+    }
+
     return null;
   };
 
@@ -1094,8 +1242,8 @@ const AdminPanel = ({ isOpen, onClose }) => {
   const panelWidthClass = isAuthenticated ? 'w-full max-w-6xl' : 'w-50% max-w-md';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className={`${panelWidthClass} border border-cyan-500/20 bg-gray-950 p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto reveal animate-page-fade glow-card`}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200 ">
+      <div className={`${panelWidthClass} border border-cyan-500/20 bg-gray-950 p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto reveal animate-page-fade rounded-xl`}>
         <button
           onClick={handleClose}
           className="absolute top-4 right-4 text-gray-500 hover:text-cyan-400 font-mono text-sm"
@@ -1116,7 +1264,7 @@ const AdminPanel = ({ isOpen, onClose }) => {
         {isAuthenticated ? (
           <div className="space-y-6">
             <div className="flex flex-wrap gap-2 mb-4 border-b border-gray-800 pb-4">
-              {['projects', 'profile', 'skills', 'education', 'resume', 'messages', 'password'].map((tab) => (
+              {['projects', 'profile', 'skills', 'education', 'resume', 'faq', 'messages', 'password'].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -1132,6 +1280,8 @@ const AdminPanel = ({ isOpen, onClose }) => {
                     ? 'Education'
                     : tab === 'resume'
                     ? 'Resume'
+                    : tab === 'faq'
+                    ? 'FAQ'
                     : tab === 'messages'
                     ? 'Messages'
                     : 'Password'}
@@ -1167,7 +1317,7 @@ const AdminPanel = ({ isOpen, onClose }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 bg-cyan-500 text-gray-950 font-bold font-mono text-base tracking-[0.2em] uppercase hover:bg-cyan-400 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50"
+              className="w-full py-3 bg-cyan-500 text-gray-950 font-bold font-mono text-base tracking-[0.2em] uppercase hover:bg-cyan-400 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 rounded-xl"
             >
               {isLoading ? 'Authenticating...' : 'AUTHENTICATE'}
             </button>

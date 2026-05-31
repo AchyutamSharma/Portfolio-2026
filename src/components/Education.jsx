@@ -67,14 +67,14 @@ const Education = () => {
             type="button"
             onClick={handleOpenResume}
             disabled={!currentProfile.resumeUrl}
-            className={`group flex items-center justify-center gap-3 px-6 py-3 border border-cyan-500/50 text-cyan-400 font-mono tracking-widest uppercase text-xs transition-all duration-300 rounded-none w-full sm:w-auto text-center ${currentProfile.resumeUrl ? 'hover:border-cyan-400 hover:bg-cyan-500/10' : 'opacity-50 cursor-not-allowed'}`}
+            className={`group flex items-center justify-center gap-3 px-6 py-3 border border-cyan-500/50 text-cyan-400 font-mono tracking-widest uppercase text-xs transition-all duration-300 rounded-xl w-full sm:w-auto text-center ${currentProfile.resumeUrl ? 'hover:border-cyan-400 hover:bg-cyan-500/10' : 'opacity-50 cursor-not-allowed'}`}
           >
             <span>📄</span> View Resume
           </button>
           <a
             href={currentProfile.resumeUrl || '#'}
             download={currentProfile.resumeFileName || 'Resume.pdf'}
-            className={`group flex items-center justify-center gap-3 px-6 py-3 bg-cyan-500 text-gray-950 font-bold font-mono tracking-widest uppercase text-xs transition-all duration-300 hover:bg-cyan-400 hover:shadow-lg hover:shadow-cyan-500/40 rounded-none w-full sm:w-auto text-center ${currentProfile.resumeUrl ? '' : 'opacity-50 cursor-not-allowed'}`}
+            className={`group flex items-center justify-center gap-3 px-6 py-3 bg-cyan-500 text-gray-950 font-bold font-mono tracking-widest uppercase text-xs transition-all duration-300 hover:bg-cyan-400 hover:shadow-lg hover:shadow-cyan-500/40 rounded-xl w-full sm:w-auto text-center ${currentProfile.resumeUrl ? '' : 'opacity-50 cursor-not-allowed'}`}
             aria-disabled={!currentProfile.resumeUrl}
           >
             <span>📥</span> Download Resume
